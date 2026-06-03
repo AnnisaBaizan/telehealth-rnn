@@ -22,3 +22,11 @@ env/
 # Data downloads (keep synthetic, ignore large/raw real data)
 data/raw/*
 !data/raw/.gitkeep
+
+# Derived/processed tensors (regenerate via src/data_ingest/preprocess.py)
+data/processed/*.npy
+data/processed/feature_columns.txt
+
+# Node build dependencies (manuscript .docx generator)
+node_modules/
+manuscript/node_modules/

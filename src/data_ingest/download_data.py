@@ -7,44 +7,45 @@ Challenge 2019 training data (early prediction of clinical deterioration /
 sepsis onset from hourly vital-sign time series).
 
 Data provenance (see appendix/data_provenance.md):
-  - Source : PhysioNet (https://physionet.org/content/challenge-2019/1.0.0/)
-  - Dataset DOI : 10.13026/v64v-d857
-  - Paper DOI   : 10.1097/CCM.0000000000004145
-  - License : Open Data Commons Open Database License v1.0
-  - Label = "REAL secondary data" (not synthetic)
+  - Source : https://physionet.org/content/challenge-2019/1.0.0/  (Open Access)
+  - Files  : training/training_setA/*.psv and training/training_setB/*.psv
+             (40,336 patients total, ~42 MB)
+  - Dataset DOI : 10.13026/v64v-d857   | Paper DOI : 10.1097/CCM.0000000000004145
+  - License     : Creative Commons Attribution 4.0 (CC BY 4.0)
+  - Label       : "REAL secondary data" (not synthetic)
 
-The two training cohorts (training_setA, training_setB) are public and do
-NOT require credentialed access. MIMIC-IV and PPG-DaLiA require separate
-manual / credentialed download (instructions printed below).
+Method: PhysioNet's officially-documented recursive mirror with `wget`.
+This is the reliable way to pull an Open-Access PhysioNet file tree; the old
+`archive.physionet.org/users/shared/...` ZIP endpoints are gone (404).
+
+macOS does NOT ship wget. Install it once with Homebrew:  brew install wget
+(Linux usually has it; otherwise `sudo apt install wget`.)
 """
 import os
 import sys
-import zipfile
+import glob
+import shutil
 import argparse
-import requests
-from tqdm import tqdm
+import subprocess
 
-# Official PhysioNet mirror for the 2019 challenge training sets.
-URLS = {
-    "training_setA": "https://archive.physionet.org/users/shared/challenge-2019/training_setA.zip",
-    "training_setB": "https://archive.physionet.org/users/shared/challenge-2019/training_setB.zip",
-}
+BASE = "https://physionet.org/files/challenge-2019/1.0.0/training/"
 
 
-def download(url: str, dest: str) -> None:
-    if os.path.exists(dest):
-        print(f"[skip] already present: {dest}")
-        return
-    print(f"[get ] {url}")
-    with requests.get(url, stream=True, timeout=60) as r:
-        r.raise_for_status()
-        total = int(r.headers.get("content-length", 0))
-        with open(dest, "wb") as f, tqdm(
-            total=total, unit="B", unit_scale=True, desc=os.path.basename(dest)
-        ) as bar:
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
-                bar.update(len(chunk))
+def have(cmd):
+    return shutil.which(cmd) is not None
+
+
+def run_wget(out_dir):
+    # -r recursive, -np no-parent, -nH no host dir, --cut-dirs strips the
+    # files/challenge-2019/1.0.0 prefix, -N timestamping, -c continue,
+    # -R index.html skips the directory-listing pages.
+    cmd = [
+        "wget", "-r", "-N", "-c", "-np", "-nH",
+        "--cut-dirs=3", "-R", "index.html*",
+        "-P", out_dir, BASE,
+    ]
+    print("[run ]", " ".join(cmd))
+    return subprocess.call(cmd)
 
 
 def main():
@@ -53,22 +54,29 @@ def main():
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
 
-    try:
-        for name, url in URLS.items():
-            zpath = os.path.join(args.out, f"{name}.zip")
-            download(url, zpath)
-            print(f"[unzip] {zpath}")
-            with zipfile.ZipFile(zpath) as z:
-                z.extractall(args.out)
-        print("\n[done] PhysioNet 2019 training data ready under:", args.out)
-    except Exception as e:  # noqa
-        print(f"\n[error] automatic download failed: {e}")
-        print("Manually download the training sets from:")
+    if not have("wget"):
+        print("[error] `wget` not found.")
+        if sys.platform == "darwin":
+            print("  macOS: install it with ->  brew install wget")
+        else:
+            print("  Linux: install it with ->  sudo apt install wget")
+        print("\nOr download manually in a browser from:")
         print("  https://physionet.org/content/challenge-2019/1.0.0/")
-        print(f"and unzip the per-patient .psv files into: {args.out}")
+        print(f"and place the training_setA / training_setB .psv files under: {args.out}")
+        sys.exit(1)
+
+    rc = run_wget(args.out)
+    n = len(glob.glob(os.path.join(args.out, "**", "*.psv"), recursive=True))
+    if rc == 0 and n > 0:
+        print(f"\n[done] {n} .psv files under {args.out}")
+        print("Next: python src/data_ingest/preprocess.py")
+    else:
+        print(f"\n[warn] wget exit={rc}, found {n} .psv files.")
+        print("If 0 files, run this exact command yourself:")
+        print(f"  wget -r -N -c -np -nH --cut-dirs=3 -R 'index.html*' -P {args.out} {BASE}")
 
     print(
-        "\n--- Optional credentialed datasets (download manually) ---\n"
+        "\n--- Optional credentialed / extension datasets (download manually) ---\n"
         "MIMIC-IV (chronic-disease cohorts via ICD codes; vital-sign series):\n"
         "  https://physionet.org/content/mimiciv/  (requires CITI training + credentialing)\n"
         "  dataset DOI 10.13026/6mm1-ek67 | paper DOI 10.1038/s41597-022-01899-x\n"

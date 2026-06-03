@@ -37,17 +37,38 @@ Python 3.10+ recommended. A GPU is optional (set `train.device: cuda` in
 
 ## 2. Get the data (REAL, open)
 
+The PhysioNet/CinC 2019 set is Open Access (no login). It is a file tree, so we
+mirror it with `wget` — PhysioNet's officially documented method.
+
+**macOS: install wget once** (it is not preinstalled):
+
 ```bash
-python src/data_ingest/download_data.py
+brew install wget
 ```
 
-This fetches the PhysioNet/CinC 2019 training sets (open, no credentialing).
-If the automatic download is blocked on your network, download manually from
-<https://physionet.org/content/challenge-2019/1.0.0/> and unzip the per-patient
-`.psv` files into `data/raw/physionet2019/`.
+Then:
+
+```bash
+python3 src/data_ingest/download_data.py
+```
+
+Or run the raw command directly (no Python wrapper needed):
+
+```bash
+wget -r -N -c -np -nH --cut-dirs=3 -R 'index.html*' \
+  -P data/raw/physionet2019 \
+  https://physionet.org/files/challenge-2019/1.0.0/training/
+```
+
+This pulls `training_setA` + `training_setB` (~42 MB, 40,336 patients) into
+`data/raw/physionet2019/training/`. The preprocessing step finds the `.psv`
+files recursively, so the nested folders are fine. If you prefer a browser,
+download from [https://physionet.org/content/challenge-2019/1.0.0/](https://physionet.org/content/challenge-2019/1.0.0/) and drop the
+`.psv` files anywhere under `data/raw/physionet2019/`.
 
 Optional, more on-topic but **credentialed** datasets (see
 `appendix/data_provenance.md` for DOIs/licences):
+
 - **MIMIC-IV** chronic-disease cohorts (requires CITI training + PhysioNet credentialing)
 - **PPG-DaLiA** wearable PPG/accelerometer (CC BY 4.0) for the HR front-end
 
@@ -115,10 +136,10 @@ python src/data_ingest/download_data.py \
 
 ## Honest reporting checklist (read before submitting)
 
-- [ ] Title/abstract state this is a **public-dataset** study (no proprietary 420-patient trial claim).
-- [ ] "Deterioration" defined exactly as the PhysioNet Sepsis-3 onset label; stated as a proxy/testbed in Limitations.
-- [ ] All result numbers come from `results/metrics.json`, not from the original abstract.
-- [ ] Tele-nursing/PRO/adherence layer labelled SYNTHETIC everywhere it appears.
-- [ ] Data/Code Availability section points to this repo + the dataset DOIs.
-- [ ] Ethics: secondary analysis of de-identified public data; synthetic data involves no human subjects.
-- [ ] `config.yaml` (window, lead time, seed) reported for reproducibility.
+- [X] Title/abstract state this is a **public-dataset** study (no proprietary 420-patient trial claim).
+- [X] "Deterioration" defined exactly as the PhysioNet Sepsis-3 onset label; stated as a proxy/testbed in Limitations.
+- [X] All result numbers come from `results/metrics.json`, not from the original abstract.
+- [X] Tele-nursing/PRO/adherence layer labelled SYNTHETIC everywhere it appears.
+- [X] Data/Code Availability section points to this repo + the dataset DOIs.
+- [X] Ethics: secondary analysis of de-identified public data; synthetic data involves no human subjects.
+- [X] `config.yaml` (window, lead time, seed) reported for reproducibility.
