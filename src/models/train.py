@@ -26,10 +26,19 @@ def load_cfg(path="config.yaml"):
 
 
 def get_device(pref):
+    # Explicit choices
     if pref == "cpu":
         return torch.device("cpu")
-    if pref == "cuda" or (pref == "auto" and torch.cuda.is_available()):
+    if pref == "cuda":
         return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if pref == "mps":
+        has_mps = getattr(torch.backends, "mps", None) and torch.backends.mps.is_available()
+        return torch.device("mps" if has_mps else "cpu")
+    # auto: prefer CUDA, then Apple-Silicon MPS, else CPU
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+        return torch.device("mps")
     return torch.device("cpu")
 
 

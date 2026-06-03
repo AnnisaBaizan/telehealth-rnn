@@ -20,6 +20,21 @@ pip install -r requirements.txt
 Python 3.10+ recommended. A GPU is optional (set `train.device: cuda` in
 `config.yaml`); CPU works for the GRU model.
 
+### macOS notes (Apple Silicon M1/M2/M3 and Intel)
+
+- Use `python3` and `pip3` (macOS ships an old system Python; install a current
+  one via Homebrew: `brew install python@3.12`).
+- Activate the venv with `source .venv/bin/activate` (zsh/bash, default on macOS).
+- **Apple Silicon GPU:** leave `train.device: auto` (default) — the code now
+  auto-selects the Metal/MPS backend on M-series chips, falling back to CPU
+  elsewhere. Force it with `train.device: mps` if you prefer. On Intel Macs it
+  stays on CPU, which is fine for the GRU.
+- If you hit an SSL/certificate error on download, run once:
+  `/Applications/Python\ 3.12/Install\ Certificates.command` (or
+  `pip3 install certifi`).
+- `unzip`/`wget` are available; the download script uses `requests`, so no extra
+  system tools are needed.
+
 ## 2. Get the data (REAL, open)
 
 ```bash

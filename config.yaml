@@ -1,40 +1,54 @@
+# ============================================================
+# Pipeline configuration
+# Edit paths/hyperparameters here; all scripts read this file.
+# ============================================================
+
+seed: 42
+
 data:
-  feature_columns:
-  - HR
-  - O2Sat
-  - Temp
-  - SBP
-  - MAP
-  - DBP
-  - Resp
-  label_column: SepsisLabel
-  lead_time_hours: 6
-  processed_dir: data/processed
-  raw_dir: data/raw/physionet2019
+  # PhysioNet/CinC 2019 early-deterioration (sepsis onset) challenge data.
+  # Real, openly downloadable secondary data. See appendix/data_provenance.md
+  raw_dir: "data/raw/physionet2019"
+  processed_dir: "data/processed"
+  window_hours: 8          # hours of history fed to the model per window
+  lead_time_hours: 6       # predict deterioration this many hours before onset
+  feature_columns:         # wearable-obtainable vitals present in the .psv files
+    - "HR"
+    - "O2Sat"
+    - "Temp"
+    - "SBP"
+    - "MAP"
+    - "DBP"
+    - "Resp"
+  label_column: "SepsisLabel"
   test_size: 0.2
   val_size: 0.1
-  window_hours: 8
-eval:
-  alarm_threshold: 0.5
-  figures_dir: figures
-  results_dir: results
+
+synthetic:
+  # SYNTHETIC tele-nursing / PRO / adherence layer (clearly labelled).
+  # Demonstrates the integration workflow ONLY. Never reported as outcomes.
+  out_dir: "data/processed/synthetic"
+  n_patients: 420
+  monitoring_days: 270     # ~9 months
+  enabled: true
+
 model:
-  bidirectional: false
-  dropout: 0.3
+  type: "GRU"              # GRU | LSTM
   hidden_size: 64
   num_layers: 2
-  type: GRU
-seed: 42
-synthetic:
-  enabled: true
-  monitoring_days: 270
-  n_patients: 420
-  out_dir: data/processed/synthetic
+  dropout: 0.3
+  bidirectional: false
+
 train:
-  batch_size: 128
-  device: auto
   epochs: 30
+  batch_size: 128
   lr: 0.001
-  patience: 6
-  pos_weight_auto: true
-  weight_decay: 1.0e-05
+  weight_decay: 0.00001
+  patience: 6              # early stopping
+  pos_weight_auto: true    # handle class imbalance
+  device: "auto"           # auto | cpu | cuda | mps  (mps = Apple Silicon GPU)
+
+eval:
+  results_dir: "results"
+  figures_dir: "figures"
+  alarm_threshold: 0.5     # tune on validation set
