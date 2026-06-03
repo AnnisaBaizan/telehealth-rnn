@@ -1,0 +1,40 @@
+data:
+  feature_columns:
+  - HR
+  - O2Sat
+  - Temp
+  - SBP
+  - MAP
+  - DBP
+  - Resp
+  label_column: SepsisLabel
+  lead_time_hours: 6
+  processed_dir: data/processed
+  raw_dir: data/raw/physionet2019
+  test_size: 0.2
+  val_size: 0.1
+  window_hours: 8
+eval:
+  alarm_threshold: 0.5
+  figures_dir: figures
+  results_dir: results
+model:
+  bidirectional: false
+  dropout: 0.3
+  hidden_size: 64
+  num_layers: 2
+  type: GRU
+seed: 42
+synthetic:
+  enabled: true
+  monitoring_days: 270
+  n_patients: 420
+  out_dir: data/processed/synthetic
+train:
+  batch_size: 128
+  device: auto
+  epochs: 30
+  lr: 0.001
+  patience: 6
+  pos_weight_auto: true
+  weight_decay: 1.0e-05
