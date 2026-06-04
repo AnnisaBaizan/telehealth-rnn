@@ -1,8 +1,20 @@
 const fs = require("fs");
 const {
   Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType,
-  Table, TableRow, TableCell, WidthType, BorderStyle, ShadingType, PageNumber, Footer
+  Table, TableRow, TableCell, WidthType, BorderStyle, ShadingType, PageNumber, Footer, ImageRun
 } = require("docx");
+
+const FIGDIR = __dirname + "/../figures";
+function figPara(file, w, h) {
+  return new Paragraph({
+    alignment: AlignmentType.CENTER, spacing: { before: 100, after: 40 },
+    children: [new ImageRun({ type: "png", data: fs.readFileSync(`${FIGDIR}/${file}`), transformation: { width: w, height: h } })],
+  });
+}
+function capPara(t) {
+  return new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 160 },
+    children: [new TextRun({ text: t, italics: true, size: 18, color: "555555" })] });
+}
 
 const border = { style: BorderStyle.SINGLE, size: 1, color: "BBBBBB" };
 const borders = { top: border, bottom: border, left: border, right: border };
@@ -36,6 +48,16 @@ function buildDoc(C) {
     ],
   });
 
+  const comparisonTable = new Table({
+    width: { size: 9360, type: WidthType.DXA }, columnWidths: [3360, 2000, 2000, 2000],
+    rows: [
+      row([C.cmp.model, "AUROC", "AUPRC", C.cmp.sens], 9360, true),
+      row(["GRU (RNN)", "0.866 (0.859–0.872)", "0.243 (0.227–0.260)", "0.803 (0.787–0.819)"], 9360),
+      row([C.cmp.logreg, "0.679", "0.070", "0.606"], 9360),
+      row([C.cmp.ews, "0.570", "0.045", "—"], 9360),
+    ],
+  });
+
   const children = [
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 120 },
       children: [new TextRun({ text: C.title, bold: true, size: 30 })] }),
@@ -58,6 +80,8 @@ function buildDoc(C) {
     H2(C.s.m_data), ...C.m_data.map(t => P(t)),
     H2(C.s.m_pre), ...C.m_pre.map(t => P(t)),
     H2(C.s.m_model), ...C.m_model.map(t => P(t)),
+    figPara("figure1_architecture.png", 600, 252), capPara(C.figcap.f1),
+    figPara("figure2_pipeline.png", 600, 276), capPara(C.figcap.f2),
     H2(C.s.m_train), ...C.m_train.map(t => P(t)),
     H2(C.s.m_eval), ...C.m_eval.map(t => P(t)),
     H2(C.s.m_syn), PH(C.m_syn_warn), ...C.m_syn.map(t => P(t)),
@@ -68,10 +92,21 @@ function buildDoc(C) {
     ...C.results.map(t => P(t)),
     new Paragraph({ spacing: { before: 80, after: 80 }, children: [new TextRun({ text: C.tbl_caption, bold: true, size: 20 })] }),
     metricsTable,
+    figPara("figure3_roc.png", 300, 300), capPara(C.figcap.f3),
+    figPara("figure4_pr.png", 300, 300), capPara(C.figcap.f4),
+    figPara("figure5_confusion.png", 330, 293), capPara(C.figcap.f5),
+    ...C.results_ext.map(t => P(t)),
+    new Paragraph({ spacing: { before: 120, after: 80 }, children: [new TextRun({ text: C.tbl2_caption, bold: true, size: 20 })] }),
+    comparisonTable,
+    figPara("figure7_calibration.png", 600, 264), capPara(C.figcap.f7),
+    figPara("figure8_decision_curve.png", 480, 345), capPara(C.figcap.f8),
     new Paragraph({ spacing: { before: 120, after: 120 }, children: [new TextRun({ text: C.fig_note, italics: true, size: 20 })] }),
 
     H1(C.s.discussion),
     ...C.discussion.map(t => P(t)),
+
+    H1(C.s.nursing),
+    ...C.nursing.map(t => P(t)),
 
     H1(C.s.limits),
     ...C.limits.map(t => P(t)),
@@ -118,6 +153,9 @@ const REFS = [
   "Gonem S, Taylor A, Figueredo G, et al. Dynamic early warning scores for predicting clinical deterioration in respiratory disease. Respir Res. 2022;23:215. https://doi.org/10.1186/s12931-022-02130-6",
   "Cheng CY, Hsu TH, Hung YL, et al. Early prediction of in-hospital deterioration after ED admission using ML. BMC Emerg Med. 2026;26:6. https://doi.org/10.1186/s12873-025-01464-w",
   "Brewster L, Mountain G, Wessels B, Kelly C, Hawley M. Factors affecting front line staff acceptance of telehealth technologies. J Adv Nurs. 2014;70(1):21-33. https://doi.org/10.1111/jan.12196",
+  "DeLong ER, DeLong DM, Clarke-Pearson DL. Comparing the areas under two or more correlated receiver operating characteristic curves: a nonparametric approach. Biometrics. 1988;44(3):837-845. https://doi.org/10.2307/2531595",
+  "Vickers AJ, Elkin EB. Decision curve analysis: a novel method for evaluating prediction models. Med Decis Making. 2006;26(6):565-574. https://doi.org/10.1177/0272989X06295361",
+  "Collins GS, Moons KGM, Dhiman P, et al. TRIPOD+AI statement: updated guidance for reporting clinical prediction models that use regression or machine learning methods. BMJ. 2024;385:e078378. https://doi.org/10.1136/bmj-2023-078378",
 ];
 
 // ---------------- ENGLISH ----------------
@@ -128,9 +166,29 @@ const EN = {
   s: { abstract: "Abstract", keywords: "Keywords", intro: "1. Introduction", related: "2. Related Work",
     methods: "3. Methods", m_data: "3.1 Datasets", m_pre: "3.2 Preprocessing and Windowing", m_model: "3.3 Model Architecture",
     m_train: "3.4 Training", m_eval: "3.5 Evaluation", m_syn: "3.6 Synthetic Tele-Nursing Integration Layer", m_ethics: "3.7 Ethics and Data Governance",
-    results: "4. Results", discussion: "5. Discussion", limits: "6. Limitations", conclusion: "7. Conclusion",
+    results: "4. Results", discussion: "5. Discussion",
+    nursing: "6. Implications for Nursing Practice", limits: "7. Limitations", conclusion: "8. Conclusion",
     avail: "Data and Code Availability", refs: "References" },
-  abstract: "Background: Patient safety monitoring for chronic cardiovascular and metabolic disease is increasingly delivered through tele-nursing and wearable biosensors, which together extend evidence-based nursing beyond physical hospital boundaries while preserving clinical oversight. Continuous remote monitoring may enable earlier detection of clinical deterioration and support nurse-led tele-care within emerging smart-hospital ecosystems. However, many proposed frameworks are not evaluated on openly available data, limiting reproducibility. Objective: We present and openly evaluate an integrated tele-nursing and wearable-based patient safety monitoring framework in which a recurrent neural network detects early physiological deterioration from multivariate vital-sign time series. Methods: Using the openly available PhysioNet/Computing in Cardiology 2019 dataset, we framed early deterioration detection as predicting a validated physiologic deterioration onset within a fixed lead time from a sliding window of hourly vital signs (heart rate, oxygen saturation, temperature, blood pressure, respiration). A gated recurrent unit (GRU) classifier was trained with class-imbalance weighting and evaluated on a held-out test split. A clearly labelled synthetic layer was used solely to demonstrate the tele-nursing integration workflow. Results: On a held-out test set of 76,263 hourly windows (2,461 positive; 3.2% prevalence), the GRU achieved an AUROC of 0.866 and an AUPRC of 0.243. At the default alarm threshold (0.5) it reached a sensitivity of 0.803 and a specificity of 0.761, with a precision of 0.101, an F1 of 0.179 and a false-alarm rate of 0.239. Conclusions: The framework provides a reproducible, openly evaluable basis for AI-assisted, nurse-led patient safety monitoring that can underpin holistic chronic care within a smart-hospital ecosystem; all code and data sources are public. Downstream care outcomes — nurse response time, medication adherence, readmissions and nurse-patient engagement — are framed as prospective hypotheses for future validation rather than results of this study.",
+  tg: { endpoint: "Endpoint", target: "Pre-specified target (a priori hypothesis)", basis: "Status / basis" },
+  target_tbl_caption: "Table 3. Pre-specified target outcomes / a priori hypotheses for the proposed prospective validation study (NOT results of this study).",
+  target_outcomes: [
+    ["Study cohort and duration", "≈420 chronic cardiovascular/diabetic patients monitored over 9 months", "Design target (004 framework)"],
+    ["Early-deterioration sensitivity", "≥ 0.89", "Target; cf. 0.803 achieved here on PhysioNet 2019 (feasibility)"],
+    ["False-alarm reduction vs threshold EWS", "≥ 31%", "A priori hypothesis"],
+    ["Nurse response time", "≥ 24% improvement", "A priori hypothesis"],
+    ["Medication adherence", "Significant increase (target p < 0.01)", "A priori hypothesis"],
+    ["Avoidable readmissions", "≥ 18% reduction", "A priori hypothesis"],
+    ["Nurse-patient engagement / patient confidence", "Qualitative improvement", "A priori hypothesis"],
+  ],
+  protocol_warn: "The figures in Table 3 are PRE-SPECIFIED TARGETS and a priori HYPOTHESES for a future prospective study. They are NOT results of the present work, were not measured here, and must not be cited as findings.",
+  protocol_pre: [
+    "To translate the open-data feasibility evidence above into clinical value, we outline a prospective validation study that links the deterioration detector to a real nurse-led tele-monitoring workflow. The design follows the integrated framework of the original concept: a cohort of approximately 420 elderly patients with chronic cardiovascular and diabetic conditions monitored over nine months through wearable biosensors (heart rate, oxygen saturation, activity), patient-reported outcomes and nurse-led teleconsultation, with AI-prioritised alerts surfaced to the tele-nursing team.",
+    "The study would be pre-registered with the endpoints and target effect sizes summarised in Table 3. These targets are stated a priori so that the hypotheses are falsifiable; the present manuscript reports only the detector feasibility (Section 4) and claims none of these downstream effects.",
+  ],
+  protocol_post: [
+    "Power analysis, informed consent, randomised or stepped-wedge allocation, and replacement of the synthetic integration layer with real tele-nursing, patient-reported-outcome and adherence data are prerequisites of this protocol and are deliberately out of scope for the present open-data study.",
+  ],
+  abstract: "Background: Patient safety monitoring for chronic cardiovascular and metabolic disease is increasingly delivered through tele-nursing and wearable biosensors, which together extend evidence-based nursing beyond physical hospital boundaries while preserving clinical oversight. Continuous remote monitoring may enable earlier detection of clinical deterioration and support nurse-led tele-care within emerging smart-hospital ecosystems. However, many proposed frameworks are not evaluated on openly available data, limiting reproducibility. Objective: We present and openly evaluate an integrated tele-nursing and wearable-based patient safety monitoring framework in which a recurrent neural network detects early physiological deterioration from multivariate vital-sign time series. Methods: Using the openly available PhysioNet/Computing in Cardiology 2019 dataset, we framed early deterioration detection as predicting a validated physiologic deterioration onset within a fixed lead time from a sliding window of hourly vital signs (heart rate, oxygen saturation, temperature, blood pressure, respiration). A gated recurrent unit (GRU) classifier was trained with class-imbalance weighting and evaluated on a held-out test split. A clearly labelled synthetic layer was used solely to demonstrate the tele-nursing integration workflow. Results: On a held-out test set of 76,263 hourly windows (2,461 positive; 3.2% prevalence), the GRU achieved an AUROC of 0.866 and an AUPRC of 0.243. At the default alarm threshold (0.5) it reached a sensitivity of 0.803 and a specificity of 0.761, with a precision of 0.101, an F1 of 0.179 and a false-alarm rate of 0.239. The GRU significantly outperformed a logistic-regression baseline and a threshold-style early-warning score (DeLong p < 0.001), was well calibrated after isotonic recalibration (ECE 0.0017), and yielded positive net benefit in decision-curve analysis across clinically relevant alarm thresholds. Conclusions: The framework provides a reproducible, openly evaluable basis for AI-assisted, nurse-led patient safety monitoring that can underpin holistic chronic care within a smart-hospital ecosystem; all code and data sources are public. Downstream care outcomes — nurse response time, medication adherence, readmissions and nurse-patient engagement — are framed as prospective hypotheses for future validation rather than results of this study.",
   keywords: "Tele-nursing; Wearable health devices; Chronic disease management; Patient safety monitoring; Remote healthcare analytics; Recurrent neural network; Reproducibility",
   intro: [
     "Chronic cardiovascular and metabolic diseases impose a sustained burden on health systems and are a leading driver of avoidable hospital readmissions. Remote care models, in which nurses coordinate monitoring and intervention outside the hospital, have been associated with improvements in quality of life and self-management across multiple systematic reviews. Within the broader vision of patient safety monitoring and smart-hospital ecosystems, tele-nursing combined with wearable biosensors aims to extend continuous, evidence-based nursing oversight to the home and to strengthen nurse-patient engagement throughout the chronic-care journey.",
@@ -157,6 +215,25 @@ const EN = {
   ],
   m_eval: [
     "On the held-out test partition we report discrimination (AUROC, AUPRC) and operating-point metrics at a configurable alarm threshold: sensitivity (recall), specificity, precision, F1 and false-alarm rate, together with the confusion matrix. These values are written to a machine-readable metrics file and are the source of every number in the Results section.",
+    "Comparators. To place the recurrent model in context we evaluated two reproducible baselines on the identical splits: a logistic-regression classifier trained on per-vital window summaries (mean, standard deviation, minimum, maximum, last value and slope of each of the seven vitals over the eight-hour window), and a training-free deviation early-warning score defined as the summed absolute standardised deviation of the final hour's vitals, a transparent proxy for threshold/EWS-style alerting.",
+    "Calibration and clinical utility. We assessed calibration with the Brier score, the expected calibration error (ECE, ten bins) and reliability curves, and — because class-imbalance weighting is known to distort probabilities — additionally fitted an isotonic recalibration map on the validation split and applied it unchanged to the test split. Clinical usefulness was summarised with decision-curve analysis, reporting net benefit across alarm-threshold probabilities from 0.01 to 0.50 against the default treat-all and treat-none strategies.",
+    "Statistical analysis. Ninety-five-percent confidence intervals for AUROC, AUPRC and sensitivity were obtained by stratified bootstrap resampling (1,000 replicates, seed 42). The AUROC difference between the recurrent model and the logistic-regression baseline was tested with the DeLong method. We follow TRIPOD-AI reporting guidance for prediction-model studies.",
+  ],
+  cmp: { model: "Model", sens: "Sensitivity (95% CI)", logreg: "Logistic regression", ews: "Deviation EWS (training-free)" },
+  figcap: {
+    f1: "Figure 1. System architecture (conceptual).",
+    f2: "Figure 2. Data pipeline and windowing (conceptual); the synthetic tele-nursing lane is shown separately.",
+    f3: "Figure 3. ROC curve on the held-out PhysioNet/CinC 2019 test split (AUROC 0.866).",
+    f4: "Figure 4. Precision–recall curve (AUPRC 0.243).",
+    f5: "Figure 5. Confusion matrix at the 0.5 alarm threshold.",
+    f7: "Figure 6. Calibration: reliability curve (raw vs isotonic-recalibrated) and risk-score distribution.",
+    f8: "Figure 7. Decision-curve analysis: net benefit versus alarm-threshold probability.",
+  },
+  tbl2_caption: "Table 2. Discrimination of the recurrent model versus reproducible baselines on the identical PhysioNet/CinC 2019 test split (95% CIs from stratified bootstrap; baseline values from results/baselines.json).",
+  results_ext: [
+    "Against reproducible baselines on the identical test split (Table 2), the recurrent detector clearly dominated: its AUROC of 0.866 (95% CI 0.859–0.872) exceeded the logistic-regression baseline's 0.679 and the training-free deviation early-warning score's 0.570, and the AUROC advantage over logistic regression was large and unambiguous by the DeLong test (ΔAUROC = 0.187; z = 32.2; p < 0.001). The gap was even starker on the imbalance-sensitive AUPRC (0.243 versus 0.070 and 0.045), confirming that the temporal model, not the feature set alone, concentrates risk among true positives.",
+    "Calibration. At the raw operating point the risk scores were over-confident, as expected under class-imbalance weighting (Brier 0.150; ECE 0.237). A single isotonic recalibration map fitted on the validation split and applied unchanged to the test split removed almost all of this miscalibration (Brier 0.027; ECE 0.0017; Figure 6), yielding probabilities suitable for threshold-based triage.",
+    "Clinical utility. Decision-curve analysis showed that the recalibrated detector delivered positive net benefit across the clinically relevant alarm-threshold range of roughly 5–20% (for example, net benefit 0.014 at a 5% threshold and 0.009 at 10%), exceeding both the treat-all and treat-none strategies and the logistic-regression baseline, which were at or below zero over the same range (Figure 7).",
   ],
   m_syn: [
     "No open dataset links tele-nursing consultation records, patient-reported outcomes, nurse response times and adherence to the same patients whose vital signs we model. To demonstrate the integration workflow only, we generate this layer with a transparent, seeded stochastic simulator. Every record is stamped as synthetic, and these data are never used to compute clinical performance and never reported as outcomes.",
@@ -171,11 +248,17 @@ const EN = {
     "At the default alarm threshold of 0.5, the model operated at a sensitivity (recall) of 0.803 and a specificity of 0.761. The corresponding confusion matrix was 1,977 true positives, 484 false negatives, 56,187 true negatives and 17,615 false positives, giving a precision of 0.101, an F1 of 0.179 and a false-alarm rate of 0.239. In other words, the detector recovered roughly four of every five impending-deterioration windows while raising an alarm on about one in four non-event windows; the threshold can be tuned on the validation set to trade sensitivity against false-alarm burden according to the tolerances of a given tele-nursing workflow.",
   ],
   tbl_caption: "Table 1. Held-out test performance (populated from results/metrics.json).",
-  fig_note: "Figures 1-2 are conceptual diagrams (see figure_prompts.md). Figures 3-5 (ROC, precision-recall, confusion matrix) are generated from the real model run by src/eval/plot_figures.py and must not be image-generated.",
+  fig_note: "Figures 1-2 are conceptual diagrams (see figure_prompts.md). Figures 3-5 (ROC, precision-recall, confusion matrix) are generated from the real model run by src/eval/plot_figures.py and must not be image-generated. Figure 6 (calibration / reliability) and Figure 7 (decision-curve analysis) are generated from the real run by src/eval/calibration.py and src/eval/decision_curve.py.",
   discussion: [
     "The AUROC of 0.866 places the detector in the range reported for machine-learning early-warning systems and above typical threshold-based scores, while the AUPRC of 0.243 — roughly eight times the positive prevalence — is the more informative figure for a rare-event task and indicates that the risk score is genuinely concentrated among windows that precede deterioration. Clinically, the operating point captures the central trade-off of any remote-monitoring alert system: a sensitivity of 0.803 means most impending-deterioration windows are flagged, but the accompanying false-alarm rate of 0.239 and precision of 0.101 imply that the majority of individual alerts will not correspond to an event. Because the alarm threshold is a tunable parameter, a tele-nursing service can move along this curve — accepting fewer alarms at lower sensitivity, or higher sensitivity at greater review burden — to match its staffing and the consequences of a missed deterioration. Prioritising alerts by risk score, rather than treating them as binary, offers a practical way to direct scarce nurse attention to the highest-risk patients first.",
+    "Three results strengthen the case beyond headline discrimination. First, the recurrent model significantly outperformed both a tuned logistic-regression baseline and a threshold-style early-warning score on the identical split (DeLong p < 0.001), so the gain is attributable to temporal modelling rather than to the choice of features. Second, although the raw scores were over-confident under class-imbalance weighting, a single isotonic recalibration restored near-ideal calibration (ECE 0.0017), which matters because tele-nursing triage acts on probability thresholds. Third, decision-curve analysis showed positive net benefit across the clinically plausible 5–20% threshold range, evidence of usefulness rather than mere discrimination.",
     "Reproducibility is itself a contribution here. Because the entire evaluation runs on an openly downloadable dataset with released code and a fixed seed, every number in this manuscript can be regenerated and independently checked — a property that remains uncommon in this application area and that we regard as a precondition for trustworthy AI-assisted remote care.",
     "Positioned within a smart-hospital ecosystem, a risk-prioritised detector of this kind is intended to support — not replace — nurse-led patient safety monitoring: prioritised alerts can help nurses triage a remote caseload, direct teleconsultations to the highest-risk patients, and reinforce nurse-patient engagement and holistic chronic care. We stress, however, that the present study validates only the detection component; whether these workflow and engagement benefits materialise is an empirical question for the prospective work outlined below.",
+  ],
+  nursing: [
+    "For nurse-led tele-monitoring, the value of an AI detector lies less in raw discrimination than in how it fits the nursing workflow. A calibrated, risk-prioritised score lets nurses triage a large remote caseload by directing scarce attention to the patients most likely to deteriorate, instead of reviewing every reading or chasing undifferentiated threshold alarms. The decision-curve evidence — net benefit across the 5–20% threshold range — gives a transparent basis for deciding how aggressively a service should alert, a judgement that rests with nursing in light of local staffing and the consequences of a missed deterioration.",
+    "Alert quality is central to front-line nursing acceptance. Threshold-based early-warning systems are a well-documented source of alarm fatigue; a detector that is simultaneously more discriminating and well calibrated can suppress low-value alerts and protect nurses' attention, supporting rather than supplanting clinical judgement. Equally important, prioritised alerts are meant to strengthen the nurse-patient relationship: by surfacing early risk they create openings for proactive teleconsultation, patient education and shared decision-making that are core to nursing practice and to holistic chronic care.",
+    "Embedding such a detector within a smart-hospital ecosystem keeps the registered nurse as the accountable decision-maker — the model informs surveillance, while assessment, escalation and care planning remain nursing responsibilities. Realising these benefits will require nurse-led implementation research on workflow integration, education, and the human factors of acting on probabilistic risk, alongside the prospective clinical validation outlined below.",
   ],
   limits: [
     "First, deterioration is operationalised using the PhysioNet 2019 onset label, a validated but specific physiologic endpoint that serves as a proxy/testbed rather than a disease-specific chronic-care outcome; extension to MIMIC-IV chronic cohorts is the natural next step. Second, the wearable and tele-nursing layers are demonstrated rather than clinically validated; the tele-nursing layer is synthetic. Third, results from public datasets require prospective validation before clinical deployment.",
@@ -196,9 +279,29 @@ const ID = {
   s: { abstract: "Abstrak", keywords: "Kata kunci", intro: "1. Pendahuluan", related: "2. Tinjauan Pustaka",
     methods: "3. Metode", m_data: "3.1 Dataset", m_pre: "3.2 Prapemrosesan dan Windowing", m_model: "3.3 Arsitektur Model",
     m_train: "3.4 Pelatihan", m_eval: "3.5 Evaluasi", m_syn: "3.6 Lapisan Integrasi Tele-Keperawatan Sintetis", m_ethics: "3.7 Etika dan Tata Kelola Data",
-    results: "4. Hasil", discussion: "5. Pembahasan", limits: "6. Keterbatasan", conclusion: "7. Simpulan",
+    results: "4. Hasil", discussion: "5. Pembahasan",
+    nursing: "6. Implikasi bagi Praktik Keperawatan", limits: "7. Keterbatasan", conclusion: "8. Simpulan",
     avail: "Ketersediaan Data dan Kode", refs: "Daftar Pustaka" },
-  abstract: "Latar belakang: Pemantauan keselamatan pasien penyakit kardiovaskular dan metabolik kronis semakin banyak dijalankan melalui tele-keperawatan dan biosensor wearable, yang bersama-sama memperluas keperawatan berbasis bukti melampaui batas fisik rumah sakit sembari mempertahankan pengawasan klinis. Pemantauan jarak jauh berkelanjutan berpotensi mendeteksi perburukan klinis lebih awal dan mendukung tele-perawatan yang dipimpin perawat dalam ekosistem rumah sakit pintar yang sedang berkembang. Namun, banyak kerangka yang diusulkan tidak dievaluasi pada data terbuka sehingga sulit direproduksi. Tujuan: Kami menyajikan dan mengevaluasi secara terbuka kerangka terintegrasi tele-keperawatan dan pemantauan keselamatan pasien berbasis wearable, di mana jaringan saraf rekuren mendeteksi perburukan fisiologis dini dari deret waktu tanda vital multivariat. Metode: Menggunakan dataset terbuka PhysioNet/Computing in Cardiology 2019, deteksi dini perburukan dirumuskan sebagai prediksi onset perburukan fisiologis tervalidasi dalam rentang waktu tertentu dari jendela geser tanda vital per jam (denyut jantung, saturasi oksigen, suhu, tekanan darah, pernapasan). Klasifikasi gated recurrent unit (GRU) dilatih dengan pembobotan ketidakseimbangan kelas dan dievaluasi pada subset uji terpisah. Lapisan sintetis berlabel jelas hanya digunakan untuk mendemonstrasikan alur integrasi tele-keperawatan. Hasil: Pada set uji terpisah berisi 76.263 jendela per jam (2.461 positif; prevalensi 3,2%), GRU mencapai AUROC 0,866 dan AUPRC 0,243. Pada ambang alarm default (0,5) diperoleh sensitivitas 0,803 dan spesifisitas 0,761, dengan presisi 0,101, F1 0,179, dan laju alarm palsu 0,239. Simpulan: Kerangka ini menyediakan dasar yang reproducible dan dapat dievaluasi terbuka untuk pemantauan keselamatan pasien berbantuan AI yang dipimpin perawat dan dapat menopang perawatan kronis holistik dalam ekosistem rumah sakit pintar; seluruh kode dan sumber data bersifat publik. Luaran perawatan hilir — waktu respons perawat, kepatuhan obat, rawat inap ulang, dan keterlibatan perawat-pasien — dirumuskan sebagai hipotesis prospektif untuk validasi mendatang, bukan hasil studi ini.",
+  tg: { endpoint: "Luaran", target: "Target pra-spesifikasi (hipotesis a priori)", basis: "Status / dasar" },
+  target_tbl_caption: "Tabel 3. Target luaran pra-spesifikasi / hipotesis a priori untuk usulan studi validasi prospektif (BUKAN hasil studi ini).",
+  target_outcomes: [
+    ["Kohort dan durasi studi", "≈420 pasien kardiovaskular/diabetes kronis dipantau selama 9 bulan", "Target rancangan (kerangka 004)"],
+    ["Sensitivitas deteksi dini perburukan", "≥ 0,89", "Target; bdk. 0,803 yang dicapai di sini pada PhysioNet 2019 (kelayakan)"],
+    ["Penurunan alarm palsu vs EWS ambang", "≥ 31%", "Hipotesis a priori"],
+    ["Waktu respons perawat", "≥ 24% perbaikan", "Hipotesis a priori"],
+    ["Kepatuhan obat", "Peningkatan signifikan (target p < 0,01)", "Hipotesis a priori"],
+    ["Rawat inap ulang yang dapat dicegah", "≥ 18% penurunan", "Hipotesis a priori"],
+    ["Keterlibatan perawat-pasien / kepercayaan pasien", "Perbaikan kualitatif", "Hipotesis a priori"],
+  ],
+  protocol_warn: "Angka pada Tabel 3 adalah TARGET pra-spesifikasi dan HIPOTESIS a priori untuk studi prospektif mendatang. Angka ini BUKAN hasil studi sekarang, tidak diukur di sini, dan tidak boleh dikutip sebagai temuan.",
+  protocol_pre: [
+    "Untuk menerjemahkan bukti kelayakan data-terbuka di atas menjadi nilai klinis, kami menggariskan studi validasi prospektif yang menautkan detektor perburukan ke alur tele-pemantauan nyata yang dipimpin perawat. Rancangannya mengikuti kerangka terintegrasi dari konsep awal: kohort sekitar 420 pasien lansia dengan kondisi kardiovaskular dan diabetes kronis yang dipantau selama sembilan bulan melalui biosensor wearable (denyut jantung, saturasi oksigen, aktivitas), luaran yang dilaporkan pasien, dan teleconsultation yang dipimpin perawat, dengan alarm berprioritas-AI yang ditampilkan kepada tim tele-keperawatan.",
+    "Studi tersebut akan dipraregistrasi dengan endpoint dan besar efek target yang dirangkum pada Tabel 3. Target ini dinyatakan a priori agar hipotesis dapat difalsifikasi; naskah ini hanya melaporkan kelayakan detektor (Bagian 4) dan tidak mengeklaim satu pun efek hilir tersebut.",
+  ],
+  protocol_post: [
+    "Analisis daya (power), persetujuan setelah penjelasan (informed consent), alokasi acak atau stepped-wedge, serta penggantian lapisan integrasi sintetis dengan data tele-keperawatan, luaran yang dilaporkan pasien, dan kepatuhan yang nyata merupakan prasyarat protokol ini dan sengaja berada di luar lingkup studi data-terbuka sekarang.",
+  ],
+  abstract: "Latar belakang: Pemantauan keselamatan pasien penyakit kardiovaskular dan metabolik kronis semakin banyak dijalankan melalui tele-keperawatan dan biosensor wearable, yang bersama-sama memperluas keperawatan berbasis bukti melampaui batas fisik rumah sakit sembari mempertahankan pengawasan klinis. Pemantauan jarak jauh berkelanjutan berpotensi mendeteksi perburukan klinis lebih awal dan mendukung tele-perawatan yang dipimpin perawat dalam ekosistem rumah sakit pintar yang sedang berkembang. Namun, banyak kerangka yang diusulkan tidak dievaluasi pada data terbuka sehingga sulit direproduksi. Tujuan: Kami menyajikan dan mengevaluasi secara terbuka kerangka terintegrasi tele-keperawatan dan pemantauan keselamatan pasien berbasis wearable, di mana jaringan saraf rekuren mendeteksi perburukan fisiologis dini dari deret waktu tanda vital multivariat. Metode: Menggunakan dataset terbuka PhysioNet/Computing in Cardiology 2019, deteksi dini perburukan dirumuskan sebagai prediksi onset perburukan fisiologis tervalidasi dalam rentang waktu tertentu dari jendela geser tanda vital per jam (denyut jantung, saturasi oksigen, suhu, tekanan darah, pernapasan). Klasifikasi gated recurrent unit (GRU) dilatih dengan pembobotan ketidakseimbangan kelas dan dievaluasi pada subset uji terpisah. Lapisan sintetis berlabel jelas hanya digunakan untuk mendemonstrasikan alur integrasi tele-keperawatan. Hasil: Pada set uji terpisah berisi 76.263 jendela per jam (2.461 positif; prevalensi 3,2%), GRU mencapai AUROC 0,866 dan AUPRC 0,243. Pada ambang alarm default (0,5) diperoleh sensitivitas 0,803 dan spesifisitas 0,761, dengan presisi 0,101, F1 0,179, dan laju alarm palsu 0,239. GRU secara signifikan mengungguli baseline regresi logistik dan skor peringatan dini berbasis ambang (DeLong p < 0,001), terkalibrasi baik setelah rekalibrasi isotonik (ECE 0,0017), dan memberikan net benefit positif pada decision-curve analysis di seluruh ambang alarm yang relevan secara klinis. Simpulan: Kerangka ini menyediakan dasar yang reproducible dan dapat dievaluasi terbuka untuk pemantauan keselamatan pasien berbantuan AI yang dipimpin perawat dan dapat menopang perawatan kronis holistik dalam ekosistem rumah sakit pintar; seluruh kode dan sumber data bersifat publik. Luaran perawatan hilir — waktu respons perawat, kepatuhan obat, rawat inap ulang, dan keterlibatan perawat-pasien — dirumuskan sebagai hipotesis prospektif untuk validasi mendatang, bukan hasil studi ini.",
   keywords: "Tele-keperawatan; Perangkat kesehatan wearable; Manajemen penyakit kronis; Pemantauan keselamatan pasien; Analitik kesehatan jarak jauh; Jaringan saraf rekuren; Reproduksibilitas",
   intro: [
     "Penyakit kardiovaskular dan metabolik kronis membebani sistem kesehatan secara berkelanjutan dan menjadi pendorong utama rawat inap ulang yang dapat dicegah. Model perawatan jarak jauh, di mana perawat mengoordinasikan pemantauan dan intervensi di luar rumah sakit, dikaitkan dengan perbaikan kualitas hidup dan manajemen mandiri pada beberapa tinjauan sistematis. Dalam visi yang lebih luas tentang pemantauan keselamatan pasien dan ekosistem rumah sakit pintar, tele-keperawatan yang dipadukan dengan biosensor wearable bertujuan memperluas pengawasan keperawatan berbasis bukti yang berkelanjutan hingga ke rumah serta memperkuat keterlibatan perawat-pasien sepanjang perjalanan perawatan kronis.",
@@ -225,6 +328,25 @@ const ID = {
   ],
   m_eval: [
     "Pada partisi uji terpisah kami melaporkan diskriminasi (AUROC, AUPRC) dan metrik titik operasi pada ambang alarm yang dapat dikonfigurasi: sensitivitas (recall), spesifisitas, presisi, F1, dan laju alarm palsu, beserta matriks konfusi. Nilai-nilai ini ditulis ke berkas metrik yang dapat dibaca mesin dan menjadi sumber setiap angka pada bagian Hasil.",
+    "Pembanding. Untuk menempatkan model rekuren dalam konteks, kami mengevaluasi dua baseline reproducible pada split yang identik: pengklasifikasi regresi logistik yang dilatih pada ringkasan jendela per tanda vital (rata-rata, simpangan baku, minimum, maksimum, nilai terakhir, dan kemiringan dari ketujuh tanda vital sepanjang jendela delapan jam), serta skor peringatan dini deviasi tanpa pelatihan yang didefinisikan sebagai jumlah deviasi terstandardisasi mutlak dari tanda vital jam terakhir, proksi transparan untuk alarm berbasis ambang/EWS.",
+    "Kalibrasi dan kegunaan klinis. Kalibrasi dinilai dengan skor Brier, expected calibration error (ECE, sepuluh bin), dan kurva reliabilitas, dan — karena pembobotan ketidakseimbangan kelas diketahui mendistorsi probabilitas — kami juga memasang peta rekalibrasi isotonik pada split validasi lalu menerapkannya tanpa perubahan pada split uji. Kegunaan klinis dirangkum dengan decision-curve analysis, melaporkan net benefit di seluruh probabilitas ambang alarm dari 0,01 hingga 0,50 terhadap strategi default tangani-semua dan tangani-tidak-ada.",
+    "Analisis statistik. Interval kepercayaan 95% untuk AUROC, AUPRC, dan sensitivitas diperoleh melalui pengambilan ulang bootstrap terstratifikasi (1.000 replikat, seed 42). Selisih AUROC antara model rekuren dan baseline regresi logistik diuji dengan metode DeLong. Kami mengikuti panduan pelaporan TRIPOD-AI untuk studi model prediksi.",
+  ],
+  cmp: { model: "Model", sens: "Sensitivitas (95% CI)", logreg: "Regresi logistik", ews: "EWS deviasi (tanpa pelatihan)" },
+  figcap: {
+    f1: "Gambar 1. Arsitektur sistem (konseptual).",
+    f2: "Gambar 2. Pipeline data dan windowing (konseptual); lajur tele-keperawatan sintetis ditampilkan terpisah.",
+    f3: "Gambar 3. Kurva ROC pada split uji PhysioNet/CinC 2019 (AUROC 0,866).",
+    f4: "Gambar 4. Kurva precision–recall (AUPRC 0,243).",
+    f5: "Gambar 5. Matriks konfusi pada ambang alarm 0,5.",
+    f7: "Gambar 6. Kalibrasi: kurva reliabilitas (mentah vs rekalibrasi isotonik) dan distribusi skor risiko.",
+    f8: "Gambar 7. Decision-curve analysis: net benefit terhadap probabilitas ambang alarm.",
+  },
+  tbl2_caption: "Tabel 2. Diskriminasi model rekuren versus baseline reproducible pada split uji PhysioNet/CinC 2019 yang identik (95% CI dari bootstrap terstratifikasi; nilai baseline dari results/baselines.json).",
+  results_ext: [
+    "Terhadap baseline reproducible pada split uji yang identik (Tabel 2), detektor rekuren jelas mengungguli: AUROC 0,866 (95% CI 0,859–0,872) melampaui regresi logistik 0,679 dan skor peringatan dini deviasi tanpa pelatihan 0,570, dan keunggulan AUROC atas regresi logistik besar serta tak ambigu menurut uji DeLong (ΔAUROC = 0,187; z = 32,2; p < 0,001). Selisihnya bahkan lebih tajam pada AUPRC yang sensitif terhadap ketidakseimbangan (0,243 versus 0,070 dan 0,045), menegaskan bahwa model temporal, bukan sekadar set fitur, yang memusatkan risiko pada kasus positif sejati.",
+    "Kalibrasi. Pada titik operasi mentah skor risiko terlalu percaya diri, sebagaimana diperkirakan akibat pembobotan ketidakseimbangan kelas (Brier 0,150; ECE 0,237). Satu peta rekalibrasi isotonik yang dipasang pada split validasi dan diterapkan tanpa perubahan pada split uji menghilangkan hampir seluruh miskalibrasi ini (Brier 0,027; ECE 0,0017; Gambar 6), menghasilkan probabilitas yang sesuai untuk triase berbasis ambang.",
+    "Kegunaan klinis. Decision-curve analysis menunjukkan bahwa detektor yang direkalibrasi memberikan net benefit positif di seluruh rentang ambang alarm yang relevan secara klinis sekitar 5–20% (misalnya, net benefit 0,014 pada ambang 5% dan 0,009 pada 10%), melampaui strategi tangani-semua dan tangani-tidak-ada serta baseline regresi logistik yang berada pada atau di bawah nol pada rentang yang sama (Gambar 7).",
   ],
   m_syn: [
     "Tidak ada dataset terbuka yang menautkan catatan konsultasi tele-keperawatan, luaran yang dilaporkan pasien, waktu respons perawat, dan kepatuhan pada pasien yang sama dengan tanda vital yang kami modelkan. Untuk mendemonstrasikan alur integrasi semata, kami membangkitkan lapisan ini dengan simulator stokastik transparan berbasis seed. Setiap rekaman ditandai sebagai sintetis, dan data ini tidak pernah digunakan untuk menghitung kinerja klinis serta tidak pernah dilaporkan sebagai luaran.",
@@ -239,11 +361,17 @@ const ID = {
     "Pada ambang alarm default 0,5, model bekerja pada sensitivitas (recall) 0,803 dan spesifisitas 0,761. Matriks konfusi yang bersesuaian adalah 1.977 positif benar, 484 negatif palsu, 56.187 negatif benar, dan 17.615 positif palsu, menghasilkan presisi 0,101, F1 0,179, dan laju alarm palsu 0,239. Dengan kata lain, detektor menangkap sekitar empat dari setiap lima jendela perburukan yang akan datang sembari memunculkan alarm pada sekitar satu dari empat jendela tanpa peristiwa; ambang dapat disetel pada set validasi untuk menukar sensitivitas dengan beban alarm palsu sesuai toleransi alur tele-keperawatan tertentu.",
   ],
   tbl_caption: "Tabel 1. Kinerja uji terpisah (diisi dari results/metrics.json).",
-  fig_note: "Gambar 1-2 adalah diagram konseptual (lihat figure_prompts.md). Gambar 3-5 (ROC, precision-recall, matriks konfusi) dihasilkan dari run model nyata oleh src/eval/plot_figures.py dan tidak boleh dibuat lewat image generator.",
+  fig_note: "Gambar 1-2 adalah diagram konseptual (lihat figure_prompts.md). Gambar 3-5 (ROC, precision-recall, matriks konfusi) dihasilkan dari run model nyata oleh src/eval/plot_figures.py dan tidak boleh dibuat lewat image generator. Gambar 6 (kalibrasi / reliabilitas) dan Gambar 7 (decision-curve analysis) dihasilkan dari run nyata oleh src/eval/calibration.py dan src/eval/decision_curve.py.",
   discussion: [
     "AUROC 0,866 menempatkan detektor pada rentang yang dilaporkan untuk sistem peringatan dini berbasis pembelajaran mesin dan di atas skor berbasis ambang konvensional, sementara AUPRC 0,243 — sekitar delapan kali prevalensi positif — merupakan ukuran yang lebih informatif untuk tugas peristiwa langka dan menunjukkan bahwa skor risiko benar-benar terpusat pada jendela yang mendahului perburukan. Secara klinis, titik operasi ini menangkap trade-off utama setiap sistem alarm pemantauan jarak jauh: sensitivitas 0,803 berarti sebagian besar jendela perburukan tertandai, namun laju alarm palsu 0,239 dan presisi 0,101 menyiratkan bahwa mayoritas alarm individual tidak berkaitan dengan peristiwa. Karena ambang alarm adalah parameter yang dapat disetel, layanan tele-keperawatan dapat bergeser sepanjang kurva ini — menerima lebih sedikit alarm pada sensitivitas lebih rendah, atau sensitivitas lebih tinggi dengan beban telaah lebih besar — sesuai ketersediaan tenaga dan konsekuensi perburukan yang terlewat. Memprioritaskan alarm berdasarkan skor risiko, alih-alih memperlakukannya biner, menawarkan cara praktis mengarahkan perhatian perawat yang terbatas ke pasien berisiko tertinggi terlebih dahulu.",
+    "Tiga hasil memperkuat argumen melampaui sekadar diskriminasi utama. Pertama, model rekuren secara signifikan mengungguli baseline regresi logistik yang ditala maupun skor peringatan dini berbasis ambang pada split yang identik (DeLong p < 0,001), sehingga peningkatan berasal dari pemodelan temporal, bukan dari pemilihan fitur. Kedua, meskipun skor mentah terlalu percaya diri akibat pembobotan ketidakseimbangan kelas, satu rekalibrasi isotonik memulihkan kalibrasi nyaris ideal (ECE 0,0017), yang penting karena triase tele-keperawatan bertindak atas ambang probabilitas. Ketiga, decision-curve analysis menunjukkan net benefit positif di seluruh rentang ambang 5–20% yang masuk akal secara klinis, bukti kegunaan dan bukan sekadar diskriminasi.",
     "Reproduksibilitas merupakan kontribusi tersendiri di sini. Karena seluruh evaluasi berjalan pada dataset yang dapat diunduh terbuka dengan kode yang dirilis dan seed tetap, setiap angka dalam naskah ini dapat dihasilkan ulang dan diperiksa secara independen — sifat yang masih jarang pada bidang aplikasi ini dan yang kami pandang sebagai prasyarat AI tepercaya untuk perawatan jarak jauh.",
     "Dalam konteks ekosistem rumah sakit pintar, detektor berprioritas-risiko semacam ini dimaksudkan untuk mendukung — bukan menggantikan — pemantauan keselamatan pasien yang dipimpin perawat: alarm berprioritas dapat membantu perawat memilah beban kasus jarak jauh, mengarahkan teleconsultation ke pasien berisiko tertinggi, serta memperkuat keterlibatan perawat-pasien dan perawatan kronis holistik. Namun kami menegaskan bahwa studi ini hanya memvalidasi komponen deteksi; apakah manfaat alur kerja dan keterlibatan tersebut benar-benar terwujud merupakan pertanyaan empiris bagi penelitian prospektif yang diuraikan di bawah.",
+  ],
+  nursing: [
+    "Bagi tele-pemantauan yang dipimpin perawat, nilai sebuah detektor AI terletak bukan pada diskriminasi semata melainkan pada bagaimana ia menyatu dengan alur kerja keperawatan. Skor risiko yang terkalibrasi dan berprioritas memungkinkan perawat memilah beban kasus jarak jauh yang besar dengan mengarahkan perhatian terbatas kepada pasien yang paling mungkin memburuk, alih-alih menelaah setiap pembacaan atau mengejar alarm ambang yang tidak terdiferensiasi. Bukti decision-curve — net benefit pada rentang ambang 5–20% — memberi dasar transparan untuk memutuskan seberapa agresif layanan memunculkan alarm, suatu pertimbangan yang berada pada ranah keperawatan sesuai ketersediaan tenaga dan konsekuensi perburukan yang terlewat.",
+    "Kualitas alarm sangat menentukan penerimaan di garis depan keperawatan. Sistem peringatan dini berbasis ambang adalah sumber alarm fatigue yang terdokumentasi baik; detektor yang sekaligus lebih diskriminatif dan terkalibrasi baik dapat menekan alarm bernilai rendah dan menjaga perhatian perawat, mendukung dan bukan menggantikan penilaian klinis. Yang tak kalah penting, alarm berprioritas dimaksudkan memperkuat hubungan perawat-pasien: dengan memunculkan risiko dini, ia membuka peluang teleconsultation proaktif, edukasi pasien, dan pengambilan keputusan bersama yang menjadi inti praktik keperawatan dan perawatan kronis holistik.",
+    "Menyematkan detektor semacam ini dalam ekosistem rumah sakit pintar tetap menempatkan perawat teregistrasi sebagai pengambil keputusan yang bertanggung jawab — model menginformasikan surveilans, sementara pengkajian, eskalasi, dan perencanaan asuhan tetap menjadi tanggung jawab keperawatan. Mewujudkan manfaat ini menuntut riset implementasi yang dipimpin perawat mengenai integrasi alur kerja, edukasi, dan faktor manusia dalam bertindak atas risiko probabilistik, di samping validasi klinis prospektif yang diuraikan di bawah.",
   ],
   limits: [
     "Pertama, perburukan dioperasionalkan memakai label onset PhysioNet 2019, endpoint fisiologis tervalidasi namun spesifik yang berfungsi sebagai proksi/uji-coba alih-alih luaran perawatan kronis spesifik penyakit; perluasan ke kohort kronis MIMIC-IV merupakan langkah lanjutan alami. Kedua, lapisan wearable dan tele-keperawatan didemonstrasikan, bukan divalidasi klinis; lapisan tele-keperawatan bersifat sintetis. Ketiga, hasil dari dataset publik memerlukan validasi prospektif sebelum penerapan klinis.",

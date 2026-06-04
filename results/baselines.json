@@ -1,0 +1,26 @@
+{
+  "logistic_regression": {
+    "auroc": 0.6788484956525285,
+    "auprc": 0.07007870750649232,
+    "sensitivity_recall": 0.6058512799674929,
+    "specificity": 0.6489119536055934,
+    "precision": 0.054412086708999344,
+    "f1": 0.09985600910826106,
+    "false_alarm_rate": 0.35108804639440666,
+    "threshold": 0.5,
+    "confusion_matrix": {
+      "tn": 47891,
+      "fp": 25911,
+      "fn": 970,
+      "tp": 1491
+    }
+  },
+  "deviation_ews": {
+    "auroc": 0.5701813635110367,
+    "auprc": 0.04497172441439125,
+    "note": "discrimination only; training-free EWS-style severity proxy"
+  },
+  "n_test_windows": 76263,
+  "positives_test": 2461,
+  "feature_set": "per-vital mean/std/min/max/last/slope over 8h window (42 features)"
+}

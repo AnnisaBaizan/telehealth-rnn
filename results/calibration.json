@@ -1,0 +1,15 @@
+{
+  "gru": {
+    "brier": 0.14952309429645538,
+    "ece_10bin": 0.23671756631440613
+  },
+  "gru_isotonic_recalibrated": {
+    "brier": 0.027468638494610786,
+    "ece_10bin": 0.0016549244123863036,
+    "note": "isotonic fit on validation split, applied to test"
+  },
+  "logistic_regression": {
+    "brier": 0.22426210343837738,
+    "ece_10bin": 0.42224537465943773
+  }
+}

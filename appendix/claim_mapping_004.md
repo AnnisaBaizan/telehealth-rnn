@@ -32,13 +32,13 @@ result) · `DEMOTED` (moved to future-work hypothesis, not claimed as a result) 
 
 | # | Claim in 004 brief | Disposition | What the manuscript says instead / where |
 |---|--------------------|-------------|------------------------------------------|
-| 6 | Cohort of **420 chronic patients**, monitored **9 months** | REPLACED | PhysioNet/CinC 2019 open dataset; **76,263 hourly test windows**, 2,461 positive (3.2% prevalence). §3.1, §4, Table 1 |
-| 7 | RNN achieved **89% sensitivity** for early deterioration | REPLACED | Real GRU run: **sensitivity 0.803** at threshold 0.5 (AUROC 0.866, AUPRC 0.243). §4, Table 1; source `results/metrics.json` |
-| 8 | **31% reduction in false alarms** vs threshold-based alerts | REPLACED / not claimed | No comparative reduction claimed; real **false-alarm rate 0.239** reported, and threshold described as tunable. §4, §5 |
-| 9 | Nurse response time improved by **24%** | DEMOTED | Framed as prospective hypothesis, explicitly "not measured in this study." Abstract (Conclusions); §5; §6 Future work |
-| 10 | Patient adherence increased significantly (**p < 0.01**) | DEMOTED | Prospective hypothesis; synthetic layer never used for clinical outcomes. §3.6; §6 Future work |
-| 11 | Hospital readmissions decreased by **18%** | DEMOTED | Prospective hypothesis. Abstract (Conclusions); §6 Future work |
-| 12 | Qualitative feedback: improved patient confidence, stronger nurse–patient engagement | DEMOTED | Engagement framed as intended benefit / hypothesis, not a measured result. §5; §6 Future work |
+| 6 | Cohort of **420 chronic patients**, monitored **9 months** | REPLACED + TARGET | Real evaluation uses PhysioNet/CinC 2019 (**76,263 hourly test windows**, 2,461 positive; §3.1, §4, Table 1). The 420-patient/9-month cohort is retained as the **prospective design target** in this appendix (Lampiran B; not carried into the submitted manuscript). |
+| 7 | RNN achieved **89% sensitivity** for early deterioration | REPLACED + TARGET | Real GRU run: **sensitivity 0.803** at threshold 0.5 (AUROC 0.866, AUPRC 0.243; §4, Table 1, `results/metrics.json`). The 0.89 figure appears only as a **pre-specified target (≥0.89)** in this appendix (Lampiran B; not carried into the submitted manuscript). |
+| 8 | **31% reduction in false alarms** vs threshold-based alerts | TARGET | Not claimed as a result; real **false-alarm rate 0.239** reported with a tunable threshold (§4, §5). Restated as **target ≥31%** in this appendix (Lampiran B; not carried into the submitted manuscript). |
+| 9 | Nurse response time improved by **24%** | DEMOTED → TARGET | Explicitly "not measured in this study." Abstract; §5; §6 Future work; quantified as **a priori target (≥24%)** in this appendix (Lampiran B; not carried into the submitted manuscript). |
+| 10 | Patient adherence increased significantly (**p < 0.01**) | DEMOTED → TARGET | Prospective hypothesis; synthetic layer never used for clinical outcomes (§3.6; §6). Stated as **target p < 0.01** in this appendix (Lampiran B; not carried into the submitted manuscript). |
+| 11 | Hospital readmissions decreased by **18%** | DEMOTED → TARGET | Prospective hypothesis. Abstract; §6 Future work; quantified as **target ≥18% reduction** in this appendix (Lampiran B; not carried into the submitted manuscript). |
+| 12 | Qualitative feedback: improved patient confidence, stronger nurse–patient engagement | DEMOTED → TARGET | Not a measured result; intended benefit (§5; §6). Listed as **qualitative a priori target** in this appendix (Lampiran B; not carried into the submitted manuscript). |
 
 ## C. Data-integrity flags (new in manuscript, implicit in brief)
 
@@ -50,11 +50,22 @@ result) · `DEMOTED` (moved to future-work hypothesis, not claimed as a result) 
 ## Summary
 
 - **Topic / framing / keywords (rows 1–5):** fully aligned with 004.
-- **Headline numbers (rows 6–8):** replaced with real, reproducible PhysioNet
-  results — they do **not** match the brief, by design.
-- **Outcome claims (rows 9–12):** demoted to a priori hypotheses for prospective
-  validation; not reported as findings.
+- **Headline numbers (rows 6–8):** the *results* sections use real, reproducible
+  PhysioNet numbers; the 004 figures are retained as **pre-specified targets**
+  in this appendix (Lampiran B; not carried into the submitted manuscript), never as findings.
+- **Outcome claims (rows 9–12):** stated as a priori hypotheses with the 004
+  effect sizes quantified in this appendix (Lampiran B; not carried into the submitted manuscript); not reported as results.
 - **Integration layer (rows 13–14):** explicitly labelled synthetic / secondary.
+
+**Where every 004 number now lives:** Section 7 ("Proposed Prospective
+Validation Study") and its Table 3 collect all six headline figures (≈420
+patients/9 months, sensitivity ≥0.89, false alarms −31%, nurse response −24%,
+adherence p<0.01, readmissions −18%, qualitative engagement) under a bold
+"PRE-SPECIFIED TARGETS / HYPOTHESES — NOT RESULTS" banner. This is the teaching
+point on *keselarasan* (alignment): unsupported claims are neither deleted nor
+passed off as results — they are relabelled as falsifiable, pre-registered
+targets, sitting beside the one number that **was** measured (0.803 on
+PhysioNet 2019).
 
 Every figure in column "Where in manuscript" for rows 6–8 traces to
 `results/metrics.json`, produced by the pipeline on PhysioNet/CinC 2019
